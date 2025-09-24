@@ -7,7 +7,23 @@ from torchvision import datasets, transforms
 
 from model import *
 
-args = parse_args()
+def parser():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--batch-size', type=int, default=64, metavar='N',
+                        help='input batch size for training (default: 64)')
+    parser.add_argument('--epochs', type=int, default=10, metavar='N',
+                        help='number of epochs to train (default: 10)')
+    parser.add_argument('--lr', type=float, default=0.001, metavar='LR',
+                        help='learning rate (default: 0.001)')
+    parser.add_argument('--seed', type=int, default=1, metavar='S',
+                        help='random seed (default: 1)')   
+    parser.add_argument('--save-model', action='store_true', default=True,
+                        help='For Saving the current Model')
+    
+    return parser.parse_args()
+
+args = parser()
 torch.manual_seed(args.seed)
  
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')

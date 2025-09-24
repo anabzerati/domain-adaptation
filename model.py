@@ -14,16 +14,20 @@ class CNN(nn.Module):
         self.fc1 = nn.Linear(4*4*50, 500)
         self.fc2 = nn.Linear(500, 10)
 
-    def forward(self, x):
+    def forward(self, x, return_embedding=False):
         x = F.relu(self.conv1(x))
         x = F.max_pool2d(x, 2, 2)
         x = F.relu(self.conv2(x))
         x = F.max_pool2d(x, 2, 2)
         x = x.view(-1, 4*4*50)
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
+        embedding = F.relu(self.fc1(x))
+        
+        if return_embedding:
+            return embedding  # retorna antes do fc2
+        
+        x = self.fc2(embedding)
         return F.log_softmax(x, dim=1)
-   
+
 def train(model, device, train_loader, optimizer, epoch):
     model.train()
 
@@ -62,19 +66,3 @@ def test(model, device, test_loader):
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
         test_loss, correct, len(test_loader.dataset),
         100. * correct / len(test_loader.dataset)))
-
-def parser():
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument('--batch-size', type=int, default=64, metavar='N',
-                        help='input batch size for training (default: 64)')
-    parser.add_argument('--epochs', type=int, default=10, metavar='N',
-                        help='number of epochs to train (default: 10)')
-    parser.add_argument('--lr', type=float, default=0.001, metavar='LR',
-                        help='learning rate (default: 0.001)')
-    parser.add_argument('--seed', type=int, default=1, metavar='S',
-                        help='random seed (default: 1)')   
-    parser.add_argument('--save-model', action='store_true', default=True,
-                        help='For Saving the current Model')
-    
-    return parser

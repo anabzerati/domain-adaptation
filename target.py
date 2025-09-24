@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 from model import *
 
-args = parse_args()
+args = parser()
 torch.manual_seed(args.seed)
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
