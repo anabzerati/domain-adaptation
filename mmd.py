@@ -21,6 +21,7 @@ transform_svhn = transforms.Compose([
 
 mnist = datasets.MNIST('data', train=True, download=True, transform=transform_mnist)
 svhn = datasets.SVHN('data', split="train", download=True, transform=transform_svhn)
+svhn = Subset(svhn, list(range(len(mnist))))
 
 # dataset de pares, sendo 1 elemento do mnist e 1 do svhn
 class PairedDataset(Dataset):
@@ -42,7 +43,7 @@ paired_loader = DataLoader(paired_dataset, batch_size=64, shuffle=True, drop_las
 
 # CNN para obter embeddings
 model = CNN().to(device)
-model.load_state_dict(torch.load("mnist_cnn.pt", map_location=device))
+#model.load_state_dict(torch.load("mnist_cnn.pt", map_location=device))
 model.eval()
 
 
