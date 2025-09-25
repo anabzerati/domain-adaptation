@@ -1,0 +1,8 @@
+MMD entre MNIST e usps - embeddings: 0.385196328163147
+
+
+
+
+Inferencia no USPS: 42% acc
+
+DDC: 71% acc
