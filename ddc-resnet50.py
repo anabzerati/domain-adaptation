@@ -16,10 +16,6 @@ from adaptiode import *
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Using device: {device}")
 
-# =============================================================================
-# UTILITY FUNCTIONS (Train and Test)
-# =============================================================================
-
 def test(G, C, device, test_loader):
     G.eval()
     C.eval()
@@ -61,7 +57,6 @@ def train(G, C, train_loader, val_loader, optimizer, criterion, device, num_epoc
     best_val_acc = 0.0  # Keep track of the best validation accuracy
 
     for epoch in range(num_epochs):
-        # --- Training Phase ---
         G.train()
         C.train()
         running_loss = 0.0
@@ -87,11 +82,8 @@ def train(G, C, train_loader, val_loader, optimizer, criterion, device, num_epoc
         train_acc = 100.0 * correct_train / total_train
         print(f"Epoch {epoch+1}/{num_epochs} -> Train Loss: {avg_loss:.4f}, Train Acc: {train_acc:.2f}%")
 
-        # --- Validation Phase ---
-        # Evaluate the model on the validation set after each epoch
         val_acc = test(G, C, device, val_loader)
 
-        # Check if the current model is the best one
         if val_acc > best_val_acc:
             best_val_acc = val_acc
             print(f"New best model found! Accuracy: {val_acc:.2f}%. Saving model to {save_path}")
@@ -147,7 +139,7 @@ source_train, source_test, target = sim2real_split(batch_size=32, num_workers=2)
 G = G().to(device)
 C = C().to(device)
 
-save_path = "resnet_split.pth"
+save_path = "pretrained_resnet_gc.pth"
 if os.path.exists(save_path):
     checkpoint = torch.load(save_path, map_location=device)
     G.feature_extractor.load_state_dict(checkpoint["G"])
