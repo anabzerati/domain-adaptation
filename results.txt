@@ -7,3 +7,5 @@ Inferencia no USPS: 42% acc
 
 DDC: 82% acc
 Deep Coral: 83% acc
+
+DANN: 72%
