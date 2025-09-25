@@ -5,4 +5,5 @@ MMD entre MNIST e usps - embeddings: 0.385196328163147
 
 Inferencia no USPS: 42% acc
 
-DDC: 71% acc
+DDC: 82% acc
+Deep Coral: 83% acc
