@@ -24,7 +24,7 @@ def test(G, C, device, test_loader):
     correct = 0
 
     with torch.no_grad():
-        for data, target in test_loader:
+        for data, target in tqdm(test_loader, desc=f"[Testing]", leave=False): 
             data = data.to(device)
             target = target.to(device)
 
@@ -131,25 +131,15 @@ class C(nn.Module):
         return self.fc(x)
 
 
-
-source_train, source_test, target = sim2real_split(batch_size=32, num_workers=2)
+# datasets
+source, target = sim2real(32, 8, use_imagenet_norm=True)
 
 # The network must be divided on a feature extractor G and a classification head G
 G = G().to(device)
 C = C().to(device)
 
-# save_path = "pretrained_resnet_gc.pth"
-# if os.path.exists(save_path):
-#     checkpoint = torch.load(save_path, map_location=device)
-#     G.load_state_dict(checkpoint["G"])
-#     C.load_state_dict(checkpoint["C"])
-# else:
-#     # pre training on mnist
-#     optimizer = torch.optim.Adam(list(G.parameters()) + list(C.parameters()), lr=1e-3)
-#     criterion = nn.CrossEntropyLoss()
-#     train(G, C, source_train, source_test, optimizer, criterion, device, 100)
-G_opt = torch.optim.Adam(G.parameters(), lr=1e-5)
-C_opt = torch.optim.Adam(C.parameters(), lr=1e-5)
+G_opt = torch.optim.Adam(G.parameters(), lr=1e-4)
+C_opt = torch.optim.Adam(C.parameters(), lr=1e-4)
 
 # -----------------------------
 # Hook MMD according to original paper Deep Domain Confusion
@@ -168,23 +158,21 @@ print("Testing pretrained model before DA algorithm...")
 test(G, C, device, target)
 
 
-# Train on entire source dataset
-source, target = sim2real(32, 8)
+print("Performing Domain Adaptation with DDC")
 
 num_epochs = 10
 for epoch in range(num_epochs):
-    mnist_iter = iter(source)
-    svhn_iter = iter(target)
+    source_iter = iter(source)
+    target_iter = iter(target)
 
     for _ in tqdm(range(min(len(source), len(target)))):
 
-        src_imgs, src_labels = next(mnist_iter)
-        target_imgs, _ = next(svhn_iter)
+        src_imgs, src_labels = next(source_iter)
+        target_imgs, _ = next(target_iter) # DDC doesn't need target labels
 
         src_imgs = src_imgs.to(device)
         src_labels = src_labels.to(device)
         target_imgs = target_imgs.to(device)
-
 
         batch = {
             "src_imgs": src_imgs,
@@ -193,10 +181,11 @@ for epoch in range(num_epochs):
         }
         models = {"G": G, "C": C}
 
-        _, losses = hook({**models, **batch})
+        _, losses = hook({**models, **batch}) # uses hook to optimize weights with customized loss
 
-    # Exibir perdas médias por época
+    # Epoch loss
     print(f"Epoch {epoch+1}/{num_epochs}:")
     pprint(losses)
 
-    test(G, C, device, target)
+    # Uses target data for testing
+    test(G, C, device, target) 

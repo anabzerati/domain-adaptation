@@ -6,37 +6,21 @@ from torchvision import datasets, transforms
 from ignite.metrics import MaximumMeanDiscrepancy
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
+from adaptiode import  sim2real
 
 from model import *
+from torchvision.models import resnet50, ResNet50_Weights
 
-args = parser()
-torch.manual_seed(args.seed)
+torch.manual_seed(1)
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-model = CNN()
-model.load_state_dict(torch.load('mnist_cnn.pt'))
-
+## model pretrained on simulation data
+model = resnet50()
+model.load_state_dict(torch.load('Resnet_pretrained_sim2real.pt'))
 model = model.to(device)
 
-transf = transforms.Compose([
-                            transforms.Resize((28, 28)),
-                            transforms.Grayscale(),
-                            transforms.ToTensor(),
-                            transforms.Normalize((0.1307,), (0.3081,))
-                        ])
+## real (target) data
+_, target_data = sim2real(batch_size=32, num_workers=12, use_imagenet_norm=True)
 
-test_data = datasets.SVHN('data', split='test', download=True, transform=transf)
-loader = DataLoader(test_data, batch_size=1, shuffle=False)
-
-for i in range(5):
-    image, label = test_data[i]
-
-    # Convert the PyTorch tensor to a NumPy array for visualization
-    image_np = image.squeeze().numpy() 
-
-    plt.imshow(image_np, cmap='gray')
-    plt.title(f"Label: {label}")
-    plt.show()
-
-test(model, device, loader)
+test(model, device, target_data)

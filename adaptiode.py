@@ -18,25 +18,37 @@ from typing import Tuple
 from torch.utils.data import DataLoader, Dataset, random_split
 import matplotlib.pyplot as plt
 
-def sim2real(batch_size: int =32 , num_workers: int = 8) -> Tuple[DataLoader, DataLoader]:
+def sim2real(
+    batch_size: int = 32,
+    num_workers: int = 8,
+    use_imagenet_norm: bool = False,
+) -> Tuple[DataLoader, DataLoader]:    
     """
     Prepares domain adaptation datasets:
       - Source (synthetic): all data
       - Target (real_life): all data
 
-    Returns:
+    Returns:    use_imagenet_norm: bool = True,
+
         Tuple containing:
           - source_loader (DataLoader)
           - target_loader (DataLoader)
     """
     data_dir = "data2"
 
-    transform = transform.Compose([
-        transform.Resize((224,224)),
-        transform.ToTensor(),
-
-    ])
-
+    if use_imagenet_norm:
+        transform = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], 
+                                 std=[0.229, 0.224, 0.225])
+        ])
+    else:
+        transform = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.5], std=[0.5])
+        ])
 
     source =  datasets.ImageFolder("data2/synthetic", transform=transform)
 
@@ -54,7 +66,8 @@ def sim2real(batch_size: int =32 , num_workers: int = 8) -> Tuple[DataLoader, Da
 def sim2real_split(
     batch_size: int = 32,
     num_workers: int = 2,
-    source_split: float = 0.8  
+    source_split: float = 0.8,
+    use_imagenet_norm: bool = False,
 ) -> Tuple[DataLoader, DataLoader, DataLoader]:
     """
     Prepares domain adaptation datasets when there is no train/test split:
@@ -73,23 +86,29 @@ def sim2real_split(
           - target_test_loader (DataLoader)
     """
 
-
-    transform: transforms.Compose = transforms.Compose([
-        transforms.Resize((224, 224)),  
-        transforms.ToTensor(),
-    ])
+    if use_imagenet_norm:
+        transform = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], 
+                                 std=[0.229, 0.224, 0.225])
+        ])
+    else:
+        transform = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.5], std=[0.5])
+        ])
 
     source =  datasets.ImageFolder("data2/synthetic", transform=transform)
 
     target = datasets.ImageFolder("data2/real_life", transform=transform)
 
 
-
     n_total = len(source)
     n_train = int(n_total * source_split)
     n_test = n_total - n_train
     source_train, source_test = random_split(source, [n_train, n_test])
-
 
 
     source_train_loader = DataLoader(
@@ -103,7 +122,6 @@ def sim2real_split(
     )
 
     return source_train_loader, source_test_loader, target_test_loader
-
 
 def show_dataloader_samples(loader, classes=None, num_images=8):
     """

@@ -47,9 +47,8 @@ class AlexNet(nn.Module):
         x = self.classifier(x)
         return x
 
-def train(model, device, train_loader, optimizer, epoch):
+def train(model, device, train_loader, optimizer, criterion, epoch):
     model.train()
-    criterion = torch.nn.CrossEntropyLoss()
 
     for data, target in tqdm(train_loader):
         data, target = data.to(device), target.to(device)
