@@ -13,17 +13,17 @@ transform_mnist = transforms.Compose([
     transforms.ToTensor(),
 ])
 
-transform_svhn = transforms.Compose([
+transform_usps = transforms.Compose([
     transforms.Grayscale(),
     transforms.Resize((28, 28)),
     transforms.ToTensor(),
 ])
 
 mnist = datasets.MNIST('data', train=True, download=True, transform=transform_mnist)
-svhn = datasets.SVHN('data', split="train", download=True, transform=transform_svhn)
-svhn = Subset(svhn, list(range(len(mnist))))
+usps = datasets.USPS('data', download=True, transform=transform_usps)
+mnist = Subset(mnist, list(range(len(usps))))
 
-# dataset de pares, sendo 1 elemento do mnist e 1 do svhn
+# dataset de pares, sendo 1 elemento do mnist e 1 do usps
 class PairedDataset(Dataset):
     def __init__(self, ds1, ds2):
         assert len(ds1) == len(ds2)
@@ -38,7 +38,7 @@ class PairedDataset(Dataset):
         x2, _ = self.ds2[idx]
         return x1, x2
 
-paired_dataset = PairedDataset(mnist, svhn)
+paired_dataset = PairedDataset(mnist, usps)
 paired_loader = DataLoader(paired_dataset, batch_size=64, shuffle=True, drop_last=True)
 
 # CNN para obter embeddings
@@ -62,7 +62,7 @@ mmd_pixels = MaximumMeanDiscrepancy()
 mmd_pixels.attach(evaluator_pixels, "mmd")
 
 state_pixels = evaluator_pixels.run(paired_loader)
-print("MMD entre MNIST e SVHN - pixels:", state_pixels.metrics["mmd"])
+print("MMD entre MNIST e usps - pixels:", state_pixels.metrics["mmd"])
 
 # engine para MMD em embeddings
 def eval_step_emb(engine, batch):
@@ -82,4 +82,4 @@ mmd_emb = MaximumMeanDiscrepancy()
 mmd_emb.attach(evaluator_emb, "mmd")
 
 state_emb = evaluator_emb.run(paired_loader)
-print("MMD entre MNIST e SVHN - embeddings:", state_emb.metrics["mmd"])
+print("MMD entre MNIST e usps - embeddings:", state_emb.metrics["mmd"])

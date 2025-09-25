@@ -6,7 +6,7 @@ from torchvision import datasets, transforms
 from ignite.metrics import MaximumMeanDiscrepancy
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
-
+import parser 
 from model import *
 
 args = parser()
