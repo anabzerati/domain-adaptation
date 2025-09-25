@@ -104,11 +104,11 @@ Pytorch adapt uses G network as the feature extractor
 We are using ResNet50 as backbone
 """
 
-
 class G(nn.Module):
     def __init__(self):
         super().__init__()
         resnet = resnet50(weights=ResNet50_Weights.IMAGENET1K_V1)
+        # removes last fc layer
         self.feature_extractor = nn.Sequential(*list(resnet.children())[:-1])
 
     def forward(self, x):
@@ -121,7 +121,6 @@ class G(nn.Module):
 """ 
 Pytorch adapt uses a C network as classification
 """
-
 
 class C(nn.Module):
     def __init__(self, in_features=2048, num_classes=123):
@@ -139,16 +138,16 @@ source_train, source_test, target = sim2real_split(batch_size=32, num_workers=2)
 G = G().to(device)
 C = C().to(device)
 
-save_path = "pretrained_resnet_gc.pth"
-if os.path.exists(save_path):
-    checkpoint = torch.load(save_path, map_location=device)
-    G.feature_extractor.load_state_dict(checkpoint["G"])
-    C.load_state_dict(checkpoint["C"])
-else:
-    # pre training on mnist
-    optimizer = torch.optim.Adam(list(G.parameters()) + list(C.parameters()), lr=1e-3)
-    criterion = nn.CrossEntropyLoss()
-    train(G, C, source_train, source_test, optimizer, criterion, device, 100)
+# save_path = "pretrained_resnet_gc.pth"
+# if os.path.exists(save_path):
+#     checkpoint = torch.load(save_path, map_location=device)
+#     G.load_state_dict(checkpoint["G"])
+#     C.load_state_dict(checkpoint["C"])
+# else:
+#     # pre training on mnist
+#     optimizer = torch.optim.Adam(list(G.parameters()) + list(C.parameters()), lr=1e-3)
+#     criterion = nn.CrossEntropyLoss()
+#     train(G, C, source_train, source_test, optimizer, criterion, device, 100)
 G_opt = torch.optim.Adam(G.parameters(), lr=1e-5)
 C_opt = torch.optim.Adam(C.parameters(), lr=1e-5)
 
@@ -156,20 +155,14 @@ C_opt = torch.optim.Adam(C.parameters(), lr=1e-5)
 # Hook MMD according to original paper Deep Domain Confusion
 # -----------------------------
 kernel_scales = get_kernel_scales(low=-3, high=3, num_kernels=10)
-loss_fn = MMDLoss(kernel_scales=kernel_scales, mmd_type="quadratic")
-
-lambda_weight = 0.1
 
 # AlignerPlusCHook combines a classification loss with a customized loss. In the original implementation of DDC technique
 # the loss function is the classification loss combined with the quadratic MMD.
-#
 # Default classification loss function is Cross Entropy Loss
 hook = AlignerPlusCHook(
     opts=[G_opt, C_opt],
-    aligner_loss_fn=MMDLoss,
+    loss_fn=MMDLoss(kernel_scales=kernel_scales, mmd_type="quadratic")
 )
-hook = AlignerPlusCHook(opts=[G_opt, C_opt], loss_fn=loss_fn)
-
 
 print("Testing pretrained model before DA algorithm...")
 test(G, C, device, target)
