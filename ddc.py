@@ -7,8 +7,9 @@ from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 from pytorch_adapt.hooks import AlignerPlusCHook
 from pytorch_adapt.layers import MMDLoss
-from pytorch_adapt.weighters 
 from pytorch_adapt.layers.utils import get_kernel_scales
+
+from itertools import cycle
 from pprint import pprint
 import os
 
@@ -42,7 +43,16 @@ def test(G, C, device, test_loader):
     )
 
 
-def train(G, C, dataloader, optimizer, criterion, device, num_epochs=5, save_path="mnist_split.pth"):
+def train(
+    G,
+    C,
+    dataloader,
+    optimizer,
+    criterion,
+    device,
+    num_epochs=5,
+    save_path="mnist_split.pth",
+):
     """
     Train G (feature extractor) + C (classifier) for multiple epochs and save weights at the end.
 
@@ -82,12 +92,8 @@ def train(G, C, dataloader, optimizer, criterion, device, num_epochs=5, save_pat
         acc = 100.0 * correct / total
         print(f"Epoch {epoch+1}/{num_epochs} - Loss: {avg_loss:.4f}, Acc: {acc:.2f}%")
 
-    torch.save({
-        "G": G.feature_extractor.state_dict(),
-        "C": C.state_dict()
-    }, save_path)
+    torch.save({"G": G.feature_extractor.state_dict(), "C": C.state_dict()}, save_path)
     print(f"Model saved to {save_path}")
-
 
 
 """
@@ -126,19 +132,21 @@ transform_mnist = transforms.Compose(
     ]
 )
 
-transform_svhn = transforms.Compose([
-                            transforms.Resize((28, 28)),
-                            transforms.Grayscale(),
-                            transforms.ToTensor(),
-                        ])
+transform_usps = transforms.Compose(
+    [
+        transforms.Resize((28, 28)),
+        transforms.Grayscale(),
+        transforms.ToTensor(),
+    ]
+)
 
 
 mnist = datasets.MNIST("data", train=True, download=True, transform=transform_mnist)
-svhn = datasets.SVHN("data", split="train", download=True, transform=transform_svhn)
+usps = datasets.USPS("data", train=False, download=True, transform=transform_usps)
 
 
 mnist_loader = DataLoader(mnist, batch_size=32, shuffle=True)
-svhn_loader = DataLoader(svhn, batch_size=32, shuffle=True)
+usps_loader = DataLoader(usps, batch_size=32, shuffle=True)
 
 # The network must be divided on a feature extractor G and a classification head G
 G = G().to(device)
@@ -153,7 +161,16 @@ else:
     # pre training on mnist
     optimizer = torch.optim.Adam(list(G.parameters()) + list(C.parameters()), lr=1e-3)
     criterion = nn.CrossEntropyLoss()
-    train(G, C, mnist_loader, optimizer, criterion, device, num_epochs=5, save_path="mnist_split.pth")
+    train(
+        G,
+        C,
+        mnist_loader,
+        optimizer,
+        criterion,
+        device,
+        num_epochs=5,
+        save_path="mnist_split.pth",
+    )
 
 G_opt = torch.optim.Adam(G.parameters(), lr=1e-5)
 C_opt = torch.optim.Adam(C.parameters(), lr=1e-5)
@@ -170,20 +187,17 @@ lambda_weight = 0.1
 # the loss function is the classification loss combined with the quadratic MMD.
 #
 # Default classification loss function is Cross Entropy Loss
-hook = AlignerPlusCHook(
-    opts=[G_opt, C_opt],
-    aligner_loss_fn=MMDLoss,
-)
+
 hook = AlignerPlusCHook(opts=[G_opt, C_opt], loss_fn=loss_fn)
 
 # -----------------------------
 # Loop de treino (exemplo 1 passo)
 # -----------------------------
 mnist_iter = iter(mnist_loader)
-svhn_iter = iter(svhn_loader)
+usps_iter = iter(usps_loader)
 
 src_imgs, src_labels = next(mnist_iter)
-target_imgs, _ = next(svhn_iter)
+target_imgs, _ = next(usps_iter)
 
 batch = {
     "src_imgs": src_imgs,
@@ -192,25 +206,31 @@ batch = {
 }
 
 models = {"G": G, "C": C}
-test(G, C, device, svhn_loader)
-test(G,C, device, mnist_loader)
+print("Test USPS before domain adaptation")
+test(G, C, device, usps_loader)
+# test(G,C, device, mnist_loader)
+
+
 # _, losses = hook({**models, **batch})
 # pprint(losses)
 
 num_epochs = 10
 for epoch in range(num_epochs):
+
+    # necessary because datasets have different lengths
+    # avoid stopping when run out of data
+    usps_iter = iter(cycle(usps_loader))
     mnist_iter = iter(mnist_loader)
-    svhn_iter = iter(svhn_loader)
 
-    for _ in tqdm(range(min(len(mnist_loader), len(svhn_loader)))):
+    # for _ in tqdm(range(min(len(mnist_loader), len(usps_loader)))):
 
+    for _ in tqdm(range(len(mnist_loader))):
         src_imgs, src_labels = next(mnist_iter)
-        target_imgs, _ = next(svhn_iter)
+        target_imgs, _ = next(usps_iter)
 
         src_imgs = src_imgs.to(device)
         src_labels = src_labels.to(device)
         target_imgs = target_imgs.to(device)
-
 
         batch = {
             "src_imgs": src_imgs,
@@ -225,4 +245,4 @@ for epoch in range(num_epochs):
     print(f"Epoch {epoch+1}/{num_epochs}:")
     pprint(losses)
 
-    test(G, C, device, svhn_loader)
+    test(G, C, device, usps_loader)
