@@ -21,6 +21,11 @@ model.load_state_dict(torch.load('Resnet_pretrained_sim2real.pt'))
 model = model.to(device)
 
 ## real (target) data
-_, target_data = sim2real(batch_size=32, num_workers=12, use_imagenet_norm=True)
+source_data, target_data = sim2real(batch_size=32, num_workers=12, use_imagenet_norm=True)
 
+print("---- Souce data ----")
+test(model, device, source_data)
+
+
+print("---- Target data ----")
 test(model, device, target_data)
