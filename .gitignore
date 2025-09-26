@@ -2,3 +2,5 @@ __pycache__/
 data/
 data2/
 results.txt
+results_resnet50.txt
+best_model.pth
