@@ -5,7 +5,7 @@ from pytorch_adapt.layers import CORALLoss
 from itertools import cycle
 from pprint import pprint
 import os
-from ddc_resnet50 import test, train, G, C
+from ddc_resnet50 import test, G, C
 from adaptiode import sim2real
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
