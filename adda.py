@@ -33,17 +33,17 @@ transform_usps = transforms.Compose(
 mnist = datasets.MNIST("data", train=True, download=True, transform=transform_mnist)
 usps = datasets.USPS("data", train=False, download=True, transform=transform_usps)
 
-mnist_loader = DataLoader(mnist, batch_size=32, shuffle=True)
-usps_loader = DataLoader(usps, batch_size=32, shuffle=True)
+mnist_loader = DataLoader(mnist, batch_size=32, shuffle=True, drop_last=True)
+usps_loader = DataLoader(usps, batch_size=32, shuffle=True, drop_last=True)
 
 # models
 adda_G = G().to(device)
 adda_C = C().to(device)
-adda_D = Discriminator().to(device)
+adda_D = Discriminator(in_size=500, h=128).to(device)
 
-G_opt = torch.optim.Adam(adda_G.parameters())
-C_opt = torch.optim.Adam(adda_C.parameters())
-D_opt = torch.optim.Adam(adda_D.parameters())
+G_opt = torch.optim.Adam(adda_G.parameters(), lr=1e-4, betas=(0.5, 0.9))
+C_opt = torch.optim.Adam(adda_C.parameters(), lr=1e-4, betas=(0.5, 0.9))
+D_opt = torch.optim.Adam(adda_D.parameters(), lr=1e-4, betas=(0.5, 0.9))
 
 print("--- Training model on source data ---")
 # training feature extractor and classifier
@@ -61,11 +61,11 @@ print("--- Performing Domain Adaptation with ADDA ---")
 # target model
 # begins as a copy of source's feature extractor
 T = copy.deepcopy(adda_G).to(device)
-T_opt = torch.optim.Adam(T.parameters())
+T_opt = torch.optim.Adam(T.parameters(), lr=1e-4, betas=(0.5, 0.9))
 
 hook = ADDAHook(g_opts=[T_opt], d_opts=[D_opt])
 
-num_epochs = 10
+num_epochs = 100
 for epoch in range(num_epochs):
     # necessary because datasets have different lengths
     # avoid stopping when run out of data
