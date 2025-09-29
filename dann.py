@@ -22,7 +22,7 @@ def main():
 
     # The domain adaption component from the original implementation
     # consists of  three (x→1024→1024→1) fully connected layer
-    dann_D = Discriminator(in_size=500, h=1024).to(device)
+    dann_D = Discriminator(in_size=2048, h=1024).to(device)
 
     models = Models({"G": dann_G, "C": dann_C, "D": dann_D})
     optimizers = Optimizers((torch.optim.Adam, {"lr": 1e-4}))

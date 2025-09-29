@@ -136,11 +136,11 @@ def main():
     source, target = sim2real(32, 8, use_imagenet_norm=True)
 
     # The network must be divided on a feature extractor G and a classification head G
-    G = G().to(device)
-    C = C().to(device)
+    G_ddc = G().to(device)
+    C_ddc = C().to(device)
 
-    G_opt = torch.optim.Adam(G.parameters(), lr=1e-4)
-    C_opt = torch.optim.Adam(C.parameters(), lr=1e-4)
+    G_opt = torch.optim.Adam(G_ddc.parameters(), lr=1e-4)
+    C_opt = torch.optim.Adam(C_ddc.parameters(), lr=1e-4)
 
     # -----------------------------
     # Hook MMD according to original paper Deep Domain Confusion
@@ -156,7 +156,7 @@ def main():
     )
 
     print("Testing pretrained model before DA algorithm...")
-    test(G, C, device, target)
+    test(G_ddc, C_ddc, device, target)
 
 
     print("Performing Domain Adaptation with DDC")
@@ -180,7 +180,7 @@ def main():
                 "src_labels": src_labels,
                 "target_imgs": target_imgs,
             }
-            models = {"G": G, "C": C}
+            models = {"G": G_ddc, "C": C_ddc}
 
             _, losses = hook({**models, **batch}) # uses hook to optimize weights with customized loss
 
@@ -189,7 +189,7 @@ def main():
         pprint(losses)
 
         # Uses target data for testing
-        test(G, C, device, target) 
+        test(G_ddc, C_ddc, device, target) 
 
 if __name__ == "__main__":
     main()
