@@ -17,19 +17,22 @@ def main():
     coral_G = G().to(device)
     coral_C = C().to(device)
 
-    G_opt = torch.optim.Adam(coral_G.parameters(), lr=1e-4)
-    C_opt = torch.optim.Adam(coral_C.parameters(), lr=1e-4)
+
+    G_opt = torch.optim.Adam(coral_G.parameters(), lr=1e-5)
+    C_opt = torch.optim.Adam(coral_C.parameters(), lr=1e-5)
+
+
 
     # AlignPlusCHook aligns a classification loss with a customized loss function
     # In this case it will align the CrossEntropyLoss with CORALLoss
     hook = AlignerPlusCHook(opts=[G_opt, C_opt], loss_fn=CORALLoss())
     
-    print("Testing pretrained model (Imagenet) before DA algorithm...")
-    test(coral_G, coral_C, device, target_loader)
+  #  print("Testing pretrained model (Imagenet) before DA algorithm...")
+ #   test(coral_G, coral_C, device, target_loader)
 
     print("Performing Domain Adaptation with Deep Coral")
 
-    num_epochs = 10
+    num_epochs = 100
     for epoch in range(num_epochs):
         source_iter = iter(cycle(source_loader))
         target_iter = iter(target_loader)

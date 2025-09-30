@@ -2,4 +2,5 @@ Source test (sim2real, finetuning imagenet, lr 10^-4): 94.84%
 
 Target (sim2real, trained on source and tested on target):  1.4 %
 
-DDC (sim2real): 25 %
+DDC (sim2real): 23 %
+DeepCoral (sim2real) 24% com lambda = 0.8 

@@ -31,11 +31,13 @@ print("--- Training model on source data ---")
 optimizer = torch.optim.Adam(list(adda_G.parameters()) + list(adda_C.parameters()), lr = 0.0001)
 criterion = nn.CrossEntropyLoss()
 
-train(adda_G, adda_C, source_train_loader, source_test_loader, optimizer, criterion, device)
+train(adda_G, adda_C, source_train_loader, source_test_loader, optimizer, criterion, device, num_epochs=3)
 
 print("--- Testing pretrained model on target data ---")
 test(adda_G, adda_C, device, target_loader)
 
+torch.save(adda_G.state_dict(), "G_source.pth")
+torch.save(adda_C.state_dict(), "C_source.pth")
 print("--- Performing Domain Adaptation with ADDA ---")
 
 # target model
