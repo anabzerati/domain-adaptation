@@ -1,19 +1,16 @@
-import torch
-from tqdm import tqdm
-from model import CNN, train
-from torch import nn
-import torch.nn.functional as F
-from torchvision import datasets, transforms
-from pytorch_adapt.containers import Models, Optimizers
-
-from torch.utils.data import DataLoader
-from pytorch_adapt.hooks import DANNHook
-from pytorch_adapt.layers import MMDLoss
-from pytorch_adapt.layers.utils import get_kernel_scales
-from pytorch_adapt.models import Discriminator
 from itertools import cycle
 from pprint import pprint
 import os
+from tqdm import tqdm
+
+import torch
+from torch import nn
+from torchvision import datasets, transforms
+from torch.utils.data import DataLoader
+
+from pytorch_adapt.hooks import DANNHook
+from pytorch_adapt.models import Discriminator
+
 from ddc import test, train, G_class as G, C_class as C
 
 
@@ -47,56 +44,46 @@ def main():
     dann_C = C().to(device)
 
     # The domain adaption component from the original implementation
-    # consists of  three (x→1024→1024→1) fully connected layer
+    # consists of  three (x→500→1024→1) fully connected layer
     dann_D = Discriminator(in_size=500, h=1024).to(device)
 
     save_path = "mnist_split.pth"
     if os.path.exists(save_path):
-        # checkpoint = torch.load(save_path, map_location=device)
-        # dann_G.feature_extractor.load_state_dict(checkpoint["G"])
-        # dann_C.load_state_dict(checkpoint["C"])
-        pass
+        checkpoint = torch.load(save_path, map_location=device)
+
+        dann_G.feature_extractor.load_state_dict(checkpoint["G"])
+        dann_C.load_state_dict(checkpoint["C"])
+
+        print("--- Testing pretrained model on MNIST ---")
+
+        test(dann_G, dann_C, device, mnist_loader)
+        
     else:
-        # pre training on mnist
-        optimizer = torch.optim.Adam(
-            list(dann_G.parameters()) + list(C.parameters()), lr=1e-3
-        )
+        print("--- Training model on source data ---")
+        # training feature extractor and classifier
+        # need to optimize both model's parameters
+        optimizer = torch.optim.Adam(list(dann_G.parameters()) + list(dann_C.parameters()), lr = 0.0001)
         criterion = nn.CrossEntropyLoss()
-        train(
-            dann_G,
-            dann_C,
-            mnist_loader,
-            optimizer,
-            criterion,
-            device,
-            num_epochs=5,
-            save_path="mnist_split.pth",
-        )
 
-    models = Models({"G": dann_G, "C": dann_C, "D": dann_D})
-    optimizers = Optimizers((torch.optim.Adam, {"lr": 1e-4}))
-    optimizers.create_with(models)
-    optimizers = list(optimizers.values())
+        train(dann_G, dann_C, mnist_loader, optimizer, criterion, device)
 
-    hook = DANNHook(optimizers)
-    # -----------------------------
-
-    print("Test USPS before domain adaptation")
+    print("--- Testing USPS before domain adaptation ---")
     test(dann_G, dann_C, device, usps_loader)
-    # test(G,C, device, mnist_loader)
+    
+    G_opt = torch.optim.Adam(dann_G.parameters(), lr=1e-3)
+    C_opt = torch.optim.Adam(dann_C.parameters(), lr=1e-3)
+    D_opt = torch.optim.Adam(dann_D.parameters(), lr=1e-3)
 
-    # _, losses = hook({**models, **batch})
-    # pprint(losses)
+    hook = DANNHook(opts=[G_opt, C_opt, D_opt])
 
-    num_epochs = 10
+    print("--- Performing Domain Adaptation with DANN ---")
+
+    num_epochs = 100
     for epoch in range(num_epochs):
-
         # necessary because datasets have different lengths
         # avoid stopping when run out of data
         usps_iter = iter(cycle(usps_loader))
         mnist_iter = iter(mnist_loader)
-
-        # for _ in tqdm(range(min(len(mnist_loader), len(usps_loader)))):
 
         for _ in tqdm(range(len(mnist_loader))):
             src_imgs, src_labels = next(mnist_iter)
@@ -124,10 +111,13 @@ def main():
 
             _, losses = hook({**models, **batch})
 
-        # Exibir perdas médias por época
         print(f"Epoch {epoch+1}/{num_epochs}:")
         pprint(losses)
 
+        print("-- Source domain --")
+        test(dann_G, dann_C, device, mnist_loader)
+
+        print("-- Target domain --")
         test(dann_G, dann_C, device, usps_loader)
 
 
